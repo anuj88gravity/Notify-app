@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { MMKV } from 'react-native-mmkv';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import NotificationScreen from './src/pocs/pushNotification/NotificationScreen';
 import TodoScreen from './src/pocs/todoApp/TodoScreen';
 import LoginScreen from './src/pocs/otpLogin/LoginScreen';
 import WelcomeScreen from './src/pocs/otpLogin/WelcomeScreen';
 
-
 const Stack = createStackNavigator();
+const storage = new MMKV();
 
 const HomeScreen = ({ navigation }) => {
   return (
@@ -37,15 +38,28 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const App = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check the persisted login state when the app loads
+    const storedLoginState = storage.getBoolean('isLoggedIn');
+    if (storedLoginState) {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
+      <Stack.Navigator initialRouteName={isLoggedIn ? 'Welcome Screen' : 'Login Screen'}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Push Notifications" component={NotificationScreen} />
         <Stack.Screen name="Todo App" component={TodoScreen} />
-        <Stack.Screen name="Login Screen" component={LoginScreen} />
-        {/* Add the Welcome Screen */}
-        <Stack.Screen name="Welcome Screen" component={WelcomeScreen} />
+        <Stack.Screen name="Login Screen">
+          {(props) => <LoginScreen {...props} storage={storage} />}
+        </Stack.Screen>
+        <Stack.Screen name="Welcome Screen">
+          {(props) => <WelcomeScreen {...props} storage={storage} />}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

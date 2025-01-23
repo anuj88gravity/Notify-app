@@ -8,17 +8,22 @@ import {
   Alert,
 } from 'react-native';
 
+import { MMKV } from 'react-native-mmkv';
+
+const storage = new MMKV();
+
 const WelcomeScreen = ({ navigation }) => {
   // Handle logout action
   const handleLogout = () => {
-    // You can clear tokens or any session-related data here
+    storage.set('isLoggedIn', false); // Clear login state
     Alert.alert('Logout', 'You have been logged out successfully.', [
       {
         text: 'OK',
-        onPress: () => navigation.replace('Login Screen'), // Navigate to Login screen
+        onPress: () => navigation.replace('Login Screen'),
       },
     ]);
   };
+  
 
   return (
     <ImageBackground

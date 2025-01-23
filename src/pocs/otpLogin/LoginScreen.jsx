@@ -1,49 +1,134 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Picker } from '@react-native-picker/picker'; // Use this for the dropdown
-import { useNavigation } from '@react-navigation/native'; // Importing navigation
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import SmsRetriever from 'react-native-sms-retriever';
+import { useNavigation } from '@react-navigation/native';
+
+import { MMKV } from 'react-native-mmkv';
+
+const storage = new MMKV();
 
 const LoginScreen = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('+91'); // Default to India (+91)
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigation = useNavigation(); // For navigation to Welcome Screen
+  const [error, setError] = useState(null);
+  const [resendTimer, setResendTimer] = useState(60); // Countdown timer for resend OTP
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (isOtpSent) {
+      let timer = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [isOtpSent]);
+
+  // Start SMS Retriever to fetch OTP automatically
+  const startSmsRetriever = async () => {
+    try {
+      const smsToken = await SmsRetriever.startSmsRetriever();
+      SmsRetriever.addSmsListener((event) => {
+        const otpRegex = /\d{6}/; // Adjust regex for 6-digit OTP
+        const otp = event.message.match(otpRegex)?.[0];
+        if (otp) {
+          setOtp(otp);
+          SmsRetriever.removeSmsListener();
+        }
+      });
+    } catch (error) {
+      console.error('Failed to start SMS retriever:', error);
+    }
+  };
 
   // Handle sending OTP
   const handleSendOtp = async () => {
     if (phoneNumber.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number.');
+      setError('Please enter a valid 10-digit phone number.');
       return;
     }
 
-    setLoading(true); // Show loading spinner
-    try {
-      // Simulate OTP sending for demo purposes (dummy OTP is 1234)
-      const generatedOtp = '1234';
+    setLoading(true);
+    setError(null);
 
-      // Simulate delay to mimic server call
-      setTimeout(() => {
-        Alert.alert('Success', 'OTP sent successfully!');
-        setIsOtpSent(true); // Show OTP input field
-      }, 1000);
+    try {
+      const apiUrl = 'http://143.110.241.10:8000/api/generate-otp/';
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      };
+
+      const response = await fetch(apiUrl, requestOptions);
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsOtpSent(true);
+        setResendTimer(60); // Reset timer for resend
+        startSmsRetriever(); // Start listening for OTP SMS
+        setError(null);
+      } else {
+        setError(data.message || 'Failed to send OTP');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      setError('Something went wrong. Please try again.');
     } finally {
-      setLoading(false); // Hide loading spinner
+      setLoading(false);
     }
   };
 
   // Handle OTP Verification
-  const handleOtpVerification = () => {
-    // Dummy OTP verification logic
-    if (otp === '1234') {
-      Alert.alert('Success', 'OTP verified successfully!');
-      // Navigate to Welcome Screen after successful OTP verification
-      navigation.navigate('Welcome Screen');
-    } else {
-      Alert.alert('Error', 'Invalid OTP. Please try again.');
+  const handleOtpVerification = async () => {
+    if (otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const apiUrl = 'http://143.110.241.10:8000/api/verify-otp/';
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone_number: phoneNumber, otp }),
+      };
+
+      const response = await fetch(apiUrl, requestOptions);
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', 'OTP verified successfully!');
+        storage.set('isLoggedIn', true);
+        navigation.navigate('Welcome Screen');
+      } else {
+        setError(data.message || 'Invalid OTP. Please try again.');
+      }
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,48 +136,35 @@ const LoginScreen = () => {
     <View style={styles.container}>
       <Text style={styles.heading}>OTP Login</Text>
 
-      {/* Country Code and Phone Number Input */}
+      {/* Phone Number Input */}
       {!isOtpSent && (
         <View style={styles.inputContainer}>
-          {/* Country Code Selector */}
-          <Picker
-            selectedValue={countryCode}
-            onValueChange={(itemValue) => setCountryCode(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="+91 (India)" value="+91" />
-            <Picker.Item label="+1 (USA)" value="+1" />
-            <Picker.Item label="+44 (UK)" value="+44" />
-            <Picker.Item label="+61 (Australia)" value="+61" />
-            {/* Add more countries as needed */}
-          </Picker>
-
-          {/* Phone Number Input */}
           <TextInput
-            style={styles.phoneInput}
+            style={[styles.input, error && styles.inputError]}
             placeholder="Enter phone number"
             keyboardType="numeric"
-            maxLength={10} // Limit to 10 digits
+            maxLength={10}
             value={phoneNumber}
             onChangeText={(text) => {
-              // Allow only numeric input
               if (/^\d*$/.test(text)) setPhoneNumber(text);
             }}
           />
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
       )}
 
-      {/* OTP Input (Visible after sending OTP) */}
+      {/* OTP Input */}
       {isOtpSent && (
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.phoneInput}
-            placeholder="Enter OTP"
+            style={[styles.input, error && styles.inputError]}
+            placeholder="Enter 6-digit OTP"
             keyboardType="numeric"
-            maxLength={4} // Limit OTP to 4 digits
+            maxLength={6}
             value={otp}
             onChangeText={(text) => setOtp(text)}
           />
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
       )}
 
@@ -109,9 +181,25 @@ const LoginScreen = () => {
 
       {/* Verify OTP Button */}
       {isOtpSent && (
-        <TouchableOpacity style={styles.button} onPress={handleOtpVerification}>
-          <Text style={styles.buttonText}>Verify OTP</Text>
+        <TouchableOpacity style={styles.button} onPress={handleOtpVerification} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Verify OTP</Text>
+          )}
         </TouchableOpacity>
+      )}
+
+      {/* Resend OTP Button */}
+      {isOtpSent && resendTimer === 0 && (
+        <TouchableOpacity style={styles.button} onPress={handleSendOtp} disabled={loading}>
+          <Text style={styles.buttonText}>Resend OTP</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Resend Timer */}
+      {isOtpSent && resendTimer > 0 && (
+        <Text style={styles.timerText}>Resend OTP in {resendTimer} seconds</Text>
       )}
     </View>
   );
@@ -132,26 +220,22 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     width: '100%',
     marginBottom: 20,
   },
-  picker: {
-    width: 100,
-    backgroundColor: '#fff',
+  input: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-  },
-  phoneInput: {
-    flex: 1,
     padding: 15,
-    marginLeft: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    marginBottom: 5,
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
   },
   button: {
     width: '100%',
@@ -165,6 +249,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  timerText: {
+    fontSize: 14,
+    color: '#555',
   },
 });
 
