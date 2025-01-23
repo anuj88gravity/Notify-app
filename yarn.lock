@@ -2062,10 +2062,15 @@
   dependencies:
     firebase "10.13.2"
 
-"@react-native-firebase/messaging@^21.7.0":
-  version "21.7.0"
-  resolved "https://registry.yarnpkg.com/@react-native-firebase/messaging/-/messaging-21.7.0.tgz#50e5ef17a08cdfada2f2e60ffe0df63db150c144"
-  integrity sha512-0HRgilxUN72M+dswheFICP7cw2KVqBFCG2wHeD9AFsOudrs5oPK8d2OBazC5FOuXr1I+A1Omg/iAmXlYAlBAVQ==
+"@react-native-firebase/messaging@21.7.1":
+  version "21.7.1"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/messaging/-/messaging-21.7.1.tgz#826344d9cd0bb19743b985ae1fc023632f0d33c2"
+  integrity sha512-asLoTH/IZROTR/y82UpMqWGFly5TJf9Zvy+EqvgWMKhRWnAPxjC+UFHQeGwut95kg0zBj49H9F6yJ2gjdatOHg==
+
+"@react-native-picker/picker@^2.11.0":
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/@react-native-picker/picker/-/picker-2.11.0.tgz#4587fbce6a382adedad74311e96ee10bb2b2d63a"
+  integrity sha512-QuZU6gbxmOID5zZgd/H90NgBnbJ3VV6qVzp6c7/dDrmWdX8S0X5YFYgDcQFjE3dRen9wB9FWnj2VVdPU64adSg==
 
 "@react-native/assets-registry@0.76.6":
   version "0.76.6"

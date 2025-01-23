@@ -1,10 +1,12 @@
-// src/App.jsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import NotificationScreen from './src/pocs/pushNotification/NotificationScreen';
 import TodoScreen from './src/pocs/todoApp/TodoScreen';
+import LoginScreen from './src/pocs/otpLogin/LoginScreen';
+import WelcomeScreen from './src/pocs/otpLogin/WelcomeScreen';
+
 
 const Stack = createStackNavigator();
 
@@ -24,7 +26,12 @@ const HomeScreen = ({ navigation }) => {
       >
         <Text style={styles.cardText}>Todo App</Text>
       </TouchableOpacity>
-      {/* Add more cards for future POCs here */}
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('Login Screen')}
+      >
+        <Text style={styles.cardText}>Login App</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -36,6 +43,9 @@ const App = () => {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Push Notifications" component={NotificationScreen} />
         <Stack.Screen name="Todo App" component={TodoScreen} />
+        <Stack.Screen name="Login Screen" component={LoginScreen} />
+        {/* Add the Welcome Screen */}
+        <Stack.Screen name="Welcome Screen" component={WelcomeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
